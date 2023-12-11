@@ -42,11 +42,16 @@ Teammate would be confused if we keep staled code. They might think the staled c
 Same reason as above, as MusicBrainz has endorsed a [Java library](https://github.com/lastfm/coverartarchive-api) provided by last.fm.
 I am keeping my own RestClient implementation for your reference again. With the same philosophy, I would remove my unused RestClient implementation if this is not a coding challenge.
 
-#### Usage of RestClient
-This project is using `org.springframework.web.client.RestClient` instead of the well known `RestTemplate` for MusicBrainz API integration.
+#### Usage of RestClient (Already Updated)
+~~This project is using `org.springframework.web.client.RestClient` instead of the well known `RestTemplate` for MusicBrainz API integration.
 It is a modern REST client than `RestTemplate`. But it is still very new and not as flexible as `RestTemplate`. For example, it cannot handle redirected HTTP request.
 The project is using `RestTemplate` in the Wikipedia API client, due to the HTTP redirect issue. The usage of `RestClient` shall be discarded and to adopt the usage of `RestTemplate` with better reliability.
-But with concern on completion time, this small change is not done.
+But with concern on completion time, this small change is not done.~~
+
+#### Concurrency & Unit Testing
+The ArtistDetailsService needed to be further exposed for injecting mock clients in order to have proper unit tests and integration tests.
+With the concurrent API requests design for performance, API clients are needed to be new instances on every call for having concurrent API connections.
+This is more challenging to make mock injection for unit tests. One of the approach is to introduce factory pattern for each API clients, which supports `RestTemplate` injection on factory generated instance.
 
 
 ## Usage Instructions
