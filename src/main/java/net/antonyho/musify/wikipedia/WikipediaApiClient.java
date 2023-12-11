@@ -4,22 +4,18 @@ import org.springframework.web.client.RestTemplate;
 
 public class WikipediaApiClient {
 
-    private static final String uri = "https://en.wikipedia.org/api/rest_v1/page/summary/";
+    public static final String API_URI = "https://en.wikipedia.org/api/rest_v1/page/summary/{title}";
 
-    private static final RestTemplate restTemplate = new RestTemplate();
+    private static RestTemplate restTemplate = new RestTemplate();
 
-    private static WikipediaApiClient INSTANCE;
+    public WikipediaApiClient() {}
 
-    public static WikipediaApiClient getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new WikipediaApiClient();
-        }
-
-        return INSTANCE;
+    public WikipediaApiClient(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
     }
 
     public String getDescription(String title) {
-        Summary summary = restTemplate.getForObject(uri + title, Summary.class);
+        Summary summary = restTemplate.getForObject(API_URI, Summary.class, title);
 
         return summary.getExtractHtml();
     }
