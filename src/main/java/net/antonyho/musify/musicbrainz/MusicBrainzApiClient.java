@@ -1,26 +1,20 @@
 package net.antonyho.musify.musicbrainz;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestTemplate;
 
 public final class MusicBrainzApiClient {
 
-    private static final String uri = "http://musicbrainz.org/ws/2/artist/{id}?&fmt=json&inc=url-rels+release-groups";
+    public static final String API_URI = "http://musicbrainz.org/ws/2/artist/{id}?&fmt=json&inc=url-rels+release-groups";
 
-    private static final RestClient restClient = RestClient.create();
+    private static RestTemplate restTemplate = new RestTemplate();
 
-    private static MusicBrainzApiClient INSTANCE;
+    public MusicBrainzApiClient() {}
 
-    public static MusicBrainzApiClient getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new MusicBrainzApiClient();
-        }
-        return INSTANCE;
+    public MusicBrainzApiClient(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
     }
 
     public Artist getArtist(String id) {
-        ResponseEntity<Artist> apiResponse = restClient.get().uri(uri, id).retrieve().toEntity(Artist.class);
-
-        return apiResponse.getBody();
+        return restTemplate.getForObject(API_URI, Artist.class, id);
     }
 }

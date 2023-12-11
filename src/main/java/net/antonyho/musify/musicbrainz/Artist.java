@@ -84,9 +84,7 @@ public class Artist {
     }
 
     public List<ReleaseGroup> getAlbums() {
-        return this.releaseGroups.stream()
-                .filter(r -> r.getPrimaryType().equals("Album"))
-                .toList();
+        return this.releaseGroups;
     }
 
     public List<String> getAlbumIds() {

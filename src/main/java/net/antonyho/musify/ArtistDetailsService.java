@@ -1,5 +1,6 @@
 package net.antonyho.musify;
 
+import fm.last.musicbrainz.coverart.CoverArt;
 import fm.last.musicbrainz.coverart.CoverArtArchiveClient;
 import fm.last.musicbrainz.coverart.impl.DefaultCoverArtArchiveClient;
 import net.antonyho.musify.musicbrainz.Artist;
@@ -25,20 +26,14 @@ import java.util.concurrent.ExecutionException;
 @Service
 public class ArtistDetailsService {
 
-    private static final Logger log = LoggerFactory.getLogger(ArtistDetailsService.class);
-
-    private static final MusicBrainzApiClient musicBrainzApiClient = MusicBrainzApiClient.getInstance();
-
-    private static final WikibaseDataFetcher wikidataFetcher = WikibaseDataFetcher.getWikidataDataFetcher();
-
-    private static final WikipediaApiClient wikipediaApiClient = WikipediaApiClient.getInstance();
-
     private static final String WIKISITELINK = "enwiki";
+
+    private static final Logger log = LoggerFactory.getLogger(ArtistDetailsService.class);
 
     public ArtistDetails getArtist(String mbid) {
         Artist artist;
         try {
-            artist = musicBrainzApiClient.getArtist(mbid);
+            artist = new MusicBrainzApiClient().getArtist(mbid);
         } catch (HttpClientErrorException e) {
             log.error("MusicBrainz API call on [ID: {}]", mbid, e);
             throw e;
@@ -58,8 +53,10 @@ public class ArtistDetailsService {
         return fillArtistDetails(details, wikidataUrl, releaseGroups);
     }
 
-    private String getWikipediaApiTitle(String mbid, String wikidataUrl) {
+    private String getWikipediaApiTitle(String mbid, String wikidataUrl)
+            throws DataRetrievalException {
         String wikiEntityId = wikidataUrl.substring(wikidataUrl.lastIndexOf('/') + 1);
+        WikibaseDataFetcher wikidataFetcher = WikibaseDataFetcher.getWikidataDataFetcher();
         wikidataFetcher.getFilter().setSiteLinkFilter(Collections.singleton(WIKISITELINK));
 
         try {
@@ -69,47 +66,60 @@ public class ArtistDetailsService {
             }
         } catch (MediaWikiApiErrorException | IOException e) {
             log.error("Wikidata API call on [ID: {}] [Entity ID: {}]", mbid, wikiEntityId,  e);
-            return "";
+            throw new DataRetrievalException("Exception during data retrieval", e);
         }
 
-        return null;
+        throw new DataRetrievalException("No data returns from retrieval");
     }
 
-    private String getWikipediaDescription(String mbid, String wikidataUrl) {
+    private String getWikipediaDescription(String mbid, String wikidataUrl)
+            throws DataRetrievalException {
         String wikiTitle = getWikipediaApiTitle(mbid, wikidataUrl);
 
         try {
-            return wikipediaApiClient.getDescription(wikiTitle);
+            return new WikipediaApiClient().getDescription(wikiTitle);
         } catch (HttpClientErrorException | NullPointerException e) {
             log.error("Wikipedia API call on [ID: {}] [Title: {}]", mbid, wikiTitle,  e);
+            throw new DataRetrievalException("Exception during data retrieval", e);
         }
-
-        return "";
     }
 
-    private String getAlbumCoverArtUrl(String mbid, String albumId) {
+    private String getAlbumCoverArtUrl(String mbid, String albumId) throws DataRetrievalException {
         try {
             final CoverArtArchiveClient coverArtArchiveClient = new DefaultCoverArtArchiveClient();
-            return coverArtArchiveClient.getReleaseGroupByMbid(UUID.fromString(albumId)).getImages().get(0).getImageUrl();
+            CoverArt coverArt = coverArtArchiveClient.getReleaseGroupByMbid(UUID.fromString(albumId));
+            if (coverArt != null && !coverArt.getImages().isEmpty()) {
+                return coverArt.getImages().get(0).getImageUrl();
+            }
+            return "";
         } catch (HttpClientErrorException e) {
             log.error("CoverArtArchiveApiClient API call on [ID: {}] [Album ID: {}]", mbid, albumId,  e);
         }
 
-        return "";
+        throw new DataRetrievalException("No data returns from retrieval");
     }
 
     // fillArtistDetails fills rest of the details using asynchronous API calls.
     private ArtistDetails fillArtistDetails(ArtistDetails details, String wikidataUrl, List<ReleaseGroup> releaseGroups) {
             CompletableFuture<String> wikipediaDescriptionFuture =  CompletableFuture.supplyAsync(() -> {
-            return getWikipediaDescription(details.getMbid(), wikidataUrl);
-        });
+                try {
+                    return getWikipediaDescription(details.getMbid(), wikidataUrl);
+                } catch (DataRetrievalException e) {
+                    throw new RuntimeException(e);
+                }
+            });
 
         List<CompletableFuture<Album>> albumFutures = releaseGroups.stream().map(releaseGroup -> {
             Album album = new Album();
             album.setId(releaseGroup.getId());
             album.setTitle(releaseGroup.getTitle());
             CompletableFuture<Album> albumFuture = CompletableFuture.supplyAsync(() -> {
-                String coverArtUrl = getAlbumCoverArtUrl(details.getMbid(), releaseGroup.getId());
+                String coverArtUrl = null;
+                try {
+                    coverArtUrl = getAlbumCoverArtUrl(details.getMbid(), releaseGroup.getId());
+                } catch (DataRetrievalException e) {
+                    throw new RuntimeException(e);
+                }
                 album.setImageUrl(coverArtUrl);
                 return album;
             });
