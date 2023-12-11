@@ -17,6 +17,9 @@ And to shorten overall time on API calls to 3rd parties, we shall make asynchron
 
 ## Notes
 
+### Work in Progress
+Due to the amount of time, I am still working on the unit tests and end-to-end tests.
+
 ### Consideration
 
 #### Gradle over Maven
@@ -38,6 +41,12 @@ Teammate would be confused if we keep staled code. They might think the staled c
 #### CoverArtArchive API Library
 Same reason as above, as MusicBrainz has endorsed a [Java library](https://github.com/lastfm/coverartarchive-api) provided by last.fm.
 I am keeping my own RestClient implementation for your reference again. With the same philosophy, I would remove my unused RestClient implementation if this is not a coding challenge.
+
+#### Usage of RestClient
+This project is using `org.springframework.web.client.RestClient` instead of the well known `RestTemplate` for MusicBrainz API integration.
+It is a modern REST client than `RestTemplate`. But it is still very new and not as flexible as `RestTemplate`. For example, it cannot handle redirected HTTP request.
+The project is using `RestTemplate` in the Wikipedia API client, due to the HTTP redirect issue. The usage of `RestClient` shall be discarded and to adopt the usage of `RestTemplate` with better reliability.
+But with concern on completion time, this small change is not done.
 
 
 ## Usage Instructions
