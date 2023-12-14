@@ -56,7 +56,7 @@ This is more challenging to make mock injection for unit tests. One of the appro
 
 ## Usage Instructions
 
-### Pre-requites
+### Prerequisites
 The usage instructions here suppose that your environment has **Docker** installed and ready to use.
 The make script is written for **POSIX** Shell environment with build tools installed.
 These instructions work on **Linux** and **macOS**. Not on Windows environment.
